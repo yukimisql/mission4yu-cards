@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>戰術支援</title>
+  <style>
+    :root{--neon-blue:#00d2ff;--neon-green:#00ff66;--neon-orange:#ff9900;--neon-purple:#cc66ff;--txt:#e2e8f0;--muted:#64748b;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{min-height:100dvh;display:flex;align-items:center;justify-content:center;}
+    .scene{background:radial-gradient(circle at 50% 35%,#101f42 0%,#060913 70%);min-height:100dvh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px 36px;position:relative;overflow:hidden;font-family:'PingFang TC','Microsoft JhengHei',sans-serif;}
+    .scene::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(0,210,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,210,255,0.04) 1px,transparent 1px);background-size:24px 24px;pointer-events:none;}
+    .hud-label{color:rgba(0,210,255,0.45);font-size:10px;letter-spacing:4px;margin-bottom:6px;text-transform:uppercase;}
+    .title-bar{color:var(--neon-blue);font-size:clamp(18px,5vw,24px);font-weight:700;letter-spacing:4px;text-shadow:0 0 20px rgba(0,210,255,0.6);margin-bottom:4px;}
+    .subtitle{color:#8899aa;font-size:11px;letter-spacing:2px;margin-bottom:clamp(20px,4vw,32px);}
+
+    .fan-area{position:relative;width:min(360px,92vw);height:clamp(260px,44vw,320px);margin-bottom:clamp(20px,4vw,32px);flex-shrink:0;}
+    .fan-stage{position:absolute;width:100%;height:100%;top:0;left:0;}
+
+    .card-wrapper{width:clamp(120px,32vw,155px);height:clamp(178px,48vw,232px);position:absolute;left:50%;top:20px;transform-origin:50% 120%;cursor:pointer;transition:transform 0.4s cubic-bezier(0.25,0.8,0.25,1),filter 0.3s,opacity 0.4s;}
+    .card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform 0.55s cubic-bezier(0.25,0.8,0.25,1);}
+    .card-wrapper.flipped .card-inner{transform:rotateY(180deg);}
+    .card-face{position:absolute;width:100%;height:100%;border-radius:10px;backface-visibility:hidden;}
+    .card-back-face{background:#0d1527;border:1px solid rgba(0,210,255,0.25);display:flex;align-items:center;justify-content:center;background-image:radial-gradient(rgba(0,210,255,0.1) 1px,transparent 0);background-size:14px 14px;box-shadow:0 8px 28px rgba(0,0,0,0.8);}
+    .card-back-face::after{content:"[ TACTICAL ]";font-family:monospace;font-size:8px;letter-spacing:3px;color:rgba(0,210,255,0.25);border:1px dashed rgba(0,210,255,0.15);padding:12px 8px;}
+    .card-wrapper.selectable:hover .card-back-face{border-color:rgba(0,210,255,0.7);box-shadow:0 0 20px rgba(0,210,255,0.4),0 8px 28px rgba(0,0,0,0.8);}
+    .card-front-face{background:#0b111e;transform:rotateY(180deg);padding:12px;display:flex;flex-direction:column;gap:5px;box-shadow:0 8px 28px rgba(0,0,0,0.8);}
+    .cf-revival{border:1px solid rgba(0,255,102,0.35);}
+    .cf-enhance{border:1px solid rgba(255,153,0,0.35);}
+    .cf-simplify{border:1px solid rgba(204,102,255,0.35);}
+
+    .tag{font-size:8px;font-weight:700;letter-spacing:1.5px;padding:2px 6px;border-radius:4px;display:inline-block;text-transform:uppercase;font-family:monospace;}
+    .tag-revival{background:rgba(0,255,102,0.1);color:var(--neon-green);border:1px solid rgba(0,255,102,0.3);}
+    .tag-enhance{background:rgba(255,153,0,0.1);color:var(--neon-orange);border:1px solid rgba(255,153,0,0.3);}
+    .tag-simplify{background:rgba(204,102,255,0.1);color:var(--neon-purple);border:1px solid rgba(204,102,255,0.3);}
+
+    .c-name-en{font-size:9px;font-weight:700;color:rgba(226,232,240,0.45);letter-spacing:1px;font-family:monospace;line-height:1.3;text-transform:uppercase;}
+    .c-name-zh{font-size:clamp(11px,2.5vw,13px);font-weight:700;color:var(--txt);line-height:1.3;margin-top:1px;}
+    .c-effect-revival{font-size:10px;font-weight:600;color:var(--neon-green);line-height:1.4;}
+    .c-effect-enhance{font-size:10px;font-weight:600;color:var(--neon-orange);line-height:1.4;}
+    .c-effect-simplify{font-size:10px;font-weight:600;color:var(--neon-purple);line-height:1.4;}
+    .c-desc{font-size:9px;color:var(--muted);line-height:1.5;flex:1;}
+    .c-footer{font-family:monospace;font-size:8px;color:rgba(100,116,139,0.45);letter-spacing:1px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06);}
+
+    .overlay{display:none;position:absolute;inset:0;background:rgba(6,9,19,0.8);z-index:20;align-items:center;justify-content:center;gap:16px;backdrop-filter:blur(3px);padding:16px;}
+    .overlay.active{display:flex;}
+    .float-card{width:155px;height:255px;flex-shrink:0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;background:#0b111e;animation:floatIn 0.4s cubic-bezier(0.25,0.8,0.25,1) both;overflow:hidden;}
+    .float-card:nth-child(2){animation-delay:0.1s;}
+    @keyframes floatIn{from{opacity:0;transform:translateY(20px) scale(0.94);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .float-card .c-name-en{font-size:10px;}
+    .float-card .c-name-zh{font-size:15px;}
+    .float-card .c-effect-revival,.float-card .c-effect-enhance,.float-card .c-effect-simplify{font-size:12px;}
+    .float-card .c-desc{font-size:11px;line-height:1.5;overflow:hidden;}
+    .float-card .tag{font-size:9px;padding:3px 8px;}
+    .float-card .c-footer{font-size:9px;}
+
+    .btn-use{margin-top:auto;font-family:'PingFang TC','Microsoft JhengHei',monospace,sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;padding:8px 0;border-radius:6px;cursor:pointer;width:100%;text-align:center;background:transparent;transition:all 0.2s;flex-shrink:0;}
+    .btn-use:disabled{color:rgba(100,116,139,0.4);border:1.5px solid rgba(100,116,139,0.18);cursor:not-allowed;}
+    .btn-use-revival{color:var(--neon-green);border:1.5px solid rgba(0,255,102,0.5);box-shadow:0 0 10px rgba(0,255,102,0.12);}
+    .btn-use-enhance{color:var(--neon-orange);border:1.5px solid rgba(255,153,0,0.5);box-shadow:0 0 10px rgba(255,153,0,0.12);}
+    .btn-use-simplify{color:var(--neon-purple);border:1.5px solid rgba(204,102,255,0.5);box-shadow:0 0 10px rgba(204,102,255,0.12);}
+    .btn-use-revival:hover:not(:disabled){background:rgba(0,255,102,0.08);}
+    .btn-use-enhance:hover:not(:disabled){background:rgba(255,153,0,0.08);}
+    .btn-use-simplify:hover:not(:disabled){background:rgba(204,102,255,0.08);}
+
+    .btn-reset{background:transparent;border:1.5px solid #3a5060;color:#7a9ab0;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all 0.25s;position:relative;z-index:5;padding:0;}
+    .btn-reset:hover{border-color:#b0c8d8;color:#e2e8f0;background:rgba(176,200,216,0.08);}
+    .status-line{font-family:monospace;font-size:10px;color:rgba(0,210,255,0.45);letter-spacing:2px;margin-top:14px;min-height:14px;text-align:center;}
+  </style>
+</head>
+<body>
+<div class="scene">
+  <div class="hud-label">WEEKLY TASK SYSTEM</div>
+  <div class="title-bar">戰術支援</div>
+  <div class="subtitle">抽選戰術，支援任務</div>
+  <div class="fan-area">
+    <div class="fan-stage" id="fan"></div>
+    <div class="overlay" id="overlay"></div>
+  </div>
+  <button class="btn-reset" onclick="resetGame()" title="重置戰術">↺</button>
+  <div class="status-line" id="status">[ 待機中 · 請點選牌面 ]</div>
+</div>
+
+<script>
+  const DB=[
+    {en:"AAR",          zh:"戰後檢討", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「六頂思考帽」分析事件"},
+    {en:"DEBRIEF",      zh:"情資重整", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「ORID」反思報告"},
+    {en:"ALPHA STRIKE", zh:"預先宣告", camp:"enhance", campText:"火力強化", effect:"追加完成「自習」任務", desc:"任務執行前，宣告執行困難任務並完成"},
+    {en:"MERIT",        zh:"戰功嘉獎", camp:"enhance", campText:"火力強化", effect:"追加完成任務",         desc:"任務成功時，感謝自己與他人的幫助"},
+    {en:"CO-OP",        zh:"協同作戰", camp:"simplify",campText:"齊心協力", effect:"降低「運動」任務門檻", desc:"任務執行前，邀請家人一同運動"},
+  ];
+  const GLOWS={revival:"0,255,102",enhance:"255,153,0",simplify:"204,102,255"};
+  const FAN_ANGLES=[-36,-18,0,18,36];
+  const FAN_Y=[30,12,0,12,30];
+  let order=[],selected=[],usedSet=new Set(),phase='selecting';
+
+  function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+  function nameHTML(c){return `<div class="c-name-en">${c.en}</div><div class="c-name-zh">${c.zh}</div>`;}
+
+  function buildFan(){
+    order=shuffle([0,1,2,3,4]);
+    const fan=document.getElementById('fan');fan.innerHTML='';
+    const W=fan.offsetWidth||360;
+    const cardW=Math.min(155,Math.max(120,W*0.32));
+    order.forEach((dbIdx,slot)=>{
+      const c=DB[dbIdx];
+      const w=document.createElement('div');
+      w.className='card-wrapper selectable';w.id='cw'+slot;
+      w.style.cssText=`transform:rotate(${FAN_ANGLES[slot]}deg) translateY(${FAN_Y[slot]}px);z-index:${slot===2?5:4-Math.abs(slot-2)};margin-left:${-cardW/2}px;`;
+      w.innerHTML=`
+        <div class="card-inner">
+          <div class="card-face card-back-face"></div>
+          <div class="card-face card-front-face cf-${c.camp}">
+            <div><span class="tag tag-${c.camp}">${c.campText}</span></div>
+            ${nameHTML(c)}
+            <div class="c-effect-${c.camp}">${c.effect}</div>
+            <div class="c-desc">${c.desc}</div>
+            <div class="c-footer">${c.camp.toUpperCase()} · TACTICAL</div>
+          </div>
+        </div>`;
+      w.addEventListener('mouseenter',()=>{if(phase==='selecting'&&!selected.includes(slot))lift(slot,true);});
+      w.addEventListener('mouseleave',()=>{if(phase==='selecting'&&!selected.includes(slot))lift(slot,false);});
+      w.addEventListener('click',()=>onCardClick(slot));
+      fan.appendChild(w);
+    });
+  }
+
+  function lift(slot,on){
+    const w=document.getElementById('cw'+slot);
+    if(on){w.style.transform=`rotate(${FAN_ANGLES[slot]}deg) translateY(${FAN_Y[slot]-20}px) scale(1.07)`;w.style.zIndex=10;}
+    else{w.style.transform=`rotate(${FAN_ANGLES[slot]}deg) translateY(${FAN_Y[slot]}px)`;w.style.zIndex=slot===2?5:4-Math.abs(slot-2);}
+  }
+
+  function onCardClick(slot){
+    if(phase!=='selecting'||selected.includes(slot)||selected.length>=2)return;
+    selected.push(slot);lift(slot,true);
+    const rem=2-selected.length;
+    document.getElementById('status').textContent=rem>0?`[ 已選 ${selected.length} 張 · 再選 ${rem} 張 ]`:`[ 配置中... ]`;
+    if(selected.length===2)setTimeout(revealCards,260);
+  }
+
+  function revealCards(){
+    phase='revealed';usedSet.clear();
+    let done=0;
+    selected.forEach((slot,i)=>{
+      setTimeout(()=>{document.getElementById('cw'+slot).classList.add('flipped');done++;if(done===selected.length)setTimeout(showOverlay,440);},i*170);
+    });
+    for(let s=0;s<5;s++){
+      if(!selected.includes(s)){const w=document.getElementById('cw'+s);w.style.opacity='0.2';w.classList.remove('selectable');}
+    }
+    document.getElementById('status').textContent=`[ 已配置：${selected.map(s=>DB[order[s]].en+' '+DB[order[s]].zh).join('、')} ]`;
+  }
+
+  function showOverlay(){
+    const ov=document.getElementById('overlay');ov.innerHTML='';
+    selected.forEach(slot=>{
+      const c=DB[order[slot]];
+      const fc=document.createElement('div');
+      fc.className='float-card';
+      fc.style.cssText=`border:1px solid rgba(${GLOWS[c.camp]},0.4);box-shadow:0 0 36px rgba(${GLOWS[c.camp]},0.28);border-top:2px solid rgba(${GLOWS[c.camp]},0.8);`;
+      fc.innerHTML=`
+        <div><span class="tag tag-${c.camp}">${c.campText}</span></div>
+        ${nameHTML(c)}
+        <div class="c-effect-${c.camp}">${c.effect}</div>
+        <div class="c-desc">${c.desc}</div>
+        <div class="c-footer">${c.camp.toUpperCase()} · TACTICAL</div>
+        <button class="btn-use btn-use-${c.camp}" id="ubtn${slot}" onclick="useCard(${slot})">確認使用</button>
+      `;
+      ov.appendChild(fc);
+      document.getElementById('cw'+slot).style.opacity='0.25';
+    });
+    ov.classList.add('active');
+  }
+
+  function useCard(slot){
+    if(usedSet.has(slot))return;
+    usedSet.add(slot);
+    const btn=document.getElementById('ubtn'+slot);
+    btn.textContent='✓ 宣告使用';btn.disabled=true;btn.className='btn-use';
+    if(usedSet.size===selected.length)document.getElementById('status').textContent='[ 本回合戰術已全數宣告 ]';
+  }
+
+  function resetGame(){
+    selected=[];usedSet.clear();phase='selecting';
+    document.getElementById('overlay').classList.remove('active');
+    document.getElementById('overlay').innerHTML='';
+    buildFan();
+    document.getElementById('status').textContent='[ 已重置 · 請點選牌面 ]';
+  }
+
+  buildFan();
+</script>
+</body>
+</html>
