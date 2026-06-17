@@ -3,16 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>戰術支援</title>
+  <title>TACTICAL SUPPORT</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
   <style>
     :root{--neon-blue:#00d2ff;--neon-green:#00ff66;--neon-orange:#ff9900;--neon-purple:#cc66ff;--txt:#e2e8f0;--muted:#64748b;}
     *{box-sizing:border-box;margin:0;padding:0;}
     body{min-height:100dvh;display:flex;align-items:center;justify-content:center;}
     .scene{background:radial-gradient(circle at 50% 35%,#101f42 0%,#060913 70%);min-height:100dvh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px 36px;position:relative;overflow:hidden;font-family:'PingFang TC','Microsoft JhengHei',sans-serif;}
     .scene::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(0,210,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,210,255,0.04) 1px,transparent 1px);background-size:24px 24px;pointer-events:none;}
-    .hud-label{color:rgba(0,210,255,0.45);font-size:10px;letter-spacing:4px;margin-bottom:6px;text-transform:uppercase;}
-    .title-bar{color:var(--neon-blue);font-size:clamp(18px,5vw,24px);font-weight:700;letter-spacing:4px;text-shadow:0 0 20px rgba(0,210,255,0.6);margin-bottom:4px;}
-    .subtitle{color:#8899aa;font-size:11px;letter-spacing:2px;margin-bottom:clamp(20px,4vw,32px);}
+
+    .hud-label{font-family:'Orbitron',monospace;color:rgba(0,210,255,0.5);font-size:clamp(9px,2.5vw,12px);letter-spacing:4px;margin-bottom:10px;text-transform:uppercase;}
+    .title-bar{font-family:'Orbitron',monospace;color:var(--neon-blue);font-size:clamp(28px,9vw,52px);font-weight:900;letter-spacing:2px;text-align:center;line-height:1.1;text-shadow:0 0 30px rgba(0,210,255,0.7),0 0 60px rgba(0,210,255,0.3);margin-bottom:clamp(24px,5vw,40px);}
 
     .fan-area{position:relative;width:min(360px,92vw);height:clamp(260px,44vw,320px);margin-bottom:clamp(20px,4vw,32px);flex-shrink:0;}
     .fan-stage{position:absolute;width:100%;height:100%;top:0;left:0;}
@@ -71,8 +72,7 @@
 <body>
 <div class="scene">
   <div class="hud-label">WEEKLY TASK SYSTEM</div>
-  <div class="title-bar">戰術支援</div>
-  <div class="subtitle">抽選戰術，支援任務</div>
+  <div class="title-bar">TACTICAL<br>SUPPORT</div>
   <div class="fan-area">
     <div class="fan-stage" id="fan"></div>
     <div class="overlay" id="overlay"></div>
@@ -83,11 +83,11 @@
 
 <script>
   const DB=[
-    {en:"AAR",          zh:"戰後檢討", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「六頂思考帽」分析事件"},
-    {en:"DEBRIEF",      zh:"情資重整", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「ORID」反思報告"},
-    {en:"ALPHA STRIKE", zh:"預先宣告", camp:"enhance", campText:"火力強化", effect:"追加完成「自習」任務", desc:"任務執行前，宣告執行困難任務並完成"},
+    {en:"AAR",          zh:"戰後檢討", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「六頂思考帽」分析失敗事件"},
+    {en:"DEBRIEF",      zh:"情資重整", camp:"revival", campText:"戰損修復", effect:"視同完成任務",         desc:"任務失敗時，以「ORID」反思失敗事件"},
+    {en:"ALPHA STRIKE", zh:"預先宣告", camp:"enhance", campText:"火力強化", effect:"追加完成任務",         desc:"執行「自習」任務前，宣告執行困難任務並完成"},
     {en:"MERIT",        zh:"戰功嘉獎", camp:"enhance", campText:"火力強化", effect:"追加完成任務",         desc:"任務成功時，感謝自己與他人的幫助"},
-    {en:"CO-OP",        zh:"協同作戰", camp:"simplify",campText:"齊心協力", effect:"降低「運動」任務門檻", desc:"任務執行前，邀請家人一同運動"},
+    {en:"CO-OP",        zh:"協同作戰", camp:"simplify",campText:"齊心協力", effect:"降低任務條件",         desc:"執行「運動」任務前，邀請家人一同運動"},
   ];
   const GLOWS={revival:"0,255,102",enhance:"255,153,0",simplify:"204,102,255"};
   const FAN_ANGLES=[-36,-18,0,18,36];
@@ -176,8 +176,8 @@
     if(usedSet.has(slot))return;
     usedSet.add(slot);
     const btn=document.getElementById('ubtn'+slot);
-    btn.textContent='✓ 宣告使用';btn.disabled=true;btn.className='btn-use';
-    if(usedSet.size===selected.length)document.getElementById('status').textContent='[ 本回合戰術已全數宣告 ]';
+    btn.textContent='✓ 已使用';btn.disabled=true;btn.className='btn-use';
+    if(usedSet.size===selected.length)document.getElementById('status').textContent='[ 本回合戰術已全數執行 ]';
   }
 
   function resetGame(){
