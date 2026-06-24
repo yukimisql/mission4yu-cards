@@ -92,13 +92,24 @@
   const GLOWS={revival:"0,255,102",enhance:"255,153,0",simplify:"204,102,255"};
   const FAN_ANGLES=[-36,-18,0,18,36];
   const FAN_Y=[30,12,0,12,30];
+  const SAVE_KEY='tactical_support_save';
   let order=[],selected=[],usedSet=new Set(),phase='selecting';
 
   function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
   function nameHTML(c){return `<div class="c-name-en">${c.en}</div><div class="c-name-zh">${c.zh}</div>`;}
 
-  function buildFan(){
-    order=shuffle([0,1,2,3,4]);
+  function saveState(){
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify({order,selected,usedSet:[...usedSet],phase}));}catch(e){}
+  }
+  function loadState(){
+    try{const s=localStorage.getItem(SAVE_KEY);return s?JSON.parse(s):null;}catch(e){return null;}
+  }
+  function clearState(){
+    try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+  }
+
+  function buildFan(savedState){
+    if(savedState){order=savedState.order;}else{order=shuffle([0,1,2,3,4]);}
     const fan=document.getElementById('fan');fan.innerHTML='';
     const W=fan.offsetWidth||360;
     const cardW=Math.min(155,Math.max(120,W*0.32));
@@ -123,6 +134,20 @@
       w.addEventListener('click',()=>onCardClick(slot));
       fan.appendChild(w);
     });
+
+    // 恢復存檔狀態
+    if(savedState && savedState.phase==='revealed'){
+      selected=savedState.selected;
+      usedSet=new Set(savedState.usedSet);
+      phase='revealed';
+      // 立刻翻牌、淡出未選牌
+      selected.forEach(slot=>{document.getElementById('cw'+slot).classList.add('flipped');});
+      for(let s=0;s<5;s++){
+        if(!selected.includes(s)){const w=document.getElementById('cw'+s);w.style.opacity='0.2';w.classList.remove('selectable');}
+      }
+      document.getElementById('status').textContent=`[ 已配置：${selected.map(s=>DB[order[s]].en+' '+DB[order[s]].zh).join('、')} ]`;
+      setTimeout(showOverlay,100);
+    }
   }
 
   function lift(slot,on){
@@ -149,12 +174,14 @@
       if(!selected.includes(s)){const w=document.getElementById('cw'+s);w.style.opacity='0.2';w.classList.remove('selectable');}
     }
     document.getElementById('status').textContent=`[ 已配置：${selected.map(s=>DB[order[s]].en+' '+DB[order[s]].zh).join('、')} ]`;
+    saveState(); // ← 存檔
   }
 
   function showOverlay(){
     const ov=document.getElementById('overlay');ov.innerHTML='';
     selected.forEach(slot=>{
       const c=DB[order[slot]];
+      const alreadyUsed=usedSet.has(slot);
       const fc=document.createElement('div');
       fc.className='float-card';
       fc.style.cssText=`border:1px solid rgba(${GLOWS[c.camp]},0.4);box-shadow:0 0 36px rgba(${GLOWS[c.camp]},0.28);border-top:2px solid rgba(${GLOWS[c.camp]},0.8);`;
@@ -164,12 +191,17 @@
         <div class="c-effect-${c.camp}">${c.effect}</div>
         <div class="c-desc">${c.desc}</div>
         <div class="c-footer">${c.camp.toUpperCase()} · TACTICAL</div>
-        <button class="btn-use btn-use-${c.camp}" id="ubtn${slot}" onclick="useCard(${slot})">確認使用</button>
+        <button class="btn-use btn-use-${c.camp}" id="ubtn${slot}" onclick="useCard(${slot})"${alreadyUsed?' disabled':''}>
+          ${alreadyUsed?'✓ 已使用':'確認使用'}
+        </button>
       `;
       ov.appendChild(fc);
       document.getElementById('cw'+slot).style.opacity='0.25';
     });
     ov.classList.add('active');
+    if(usedSet.size===selected.length && selected.length>0){
+      document.getElementById('status').textContent='[ 本回合戰術已全數執行 ]';
+    }
   }
 
   function useCard(slot){
@@ -177,18 +209,22 @@
     usedSet.add(slot);
     const btn=document.getElementById('ubtn'+slot);
     btn.textContent='✓ 已使用';btn.disabled=true;btn.className='btn-use';
+    saveState(); // ← 更新存檔（記錄已使用狀態）
     if(usedSet.size===selected.length)document.getElementById('status').textContent='[ 本回合戰術已全數執行 ]';
   }
 
   function resetGame(){
     selected=[];usedSet.clear();phase='selecting';
+    clearState(); // ← 清除存檔
     document.getElementById('overlay').classList.remove('active');
     document.getElementById('overlay').innerHTML='';
     buildFan();
     document.getElementById('status').textContent='[ 已重置 · 請點選牌面 ]';
   }
 
-  buildFan();
+  // 啟動：先檢查有無存檔
+  const saved=loadState();
+  buildFan(saved);
 </script>
 </body>
 </html>
